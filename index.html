@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Novel Corral</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Cormorant+Garamond:ital@1&family=Work+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #241d30;
+    --sky-top: #3c3156;
+    --sky-mid: #a084a3;
+    --sky-warm: #f0b672;
+    --stone: #7c85a0;
+    --stone-dark: #363b52;
+    --gold: #eccb8e;
+    --gold-bright: #fff4da;
+    --parchment: #f3ebe0;
+    --parchment-dim: #cabfae;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: inherit; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); height: 100%; }
+  body {
+    margin: 0;
+    min-height: 100%;
+    background: var(--ink);
+    color: var(--parchment);
+    font-family: 'Work Sans', sans-serif;
+    display: flex;
+    justify-content: center;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* ---------- sky & atmosphere ---------- */
+  .bg-wash {
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 90% 60% at 50% 105%, var(--sky-warm) 0%, rgba(240,182,114,0) 60%),
+      linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 52%, #e8b98f 100%);
+    z-index: 0;
+    animation: hue-drift 50s ease-in-out infinite;
+  }
+  @keyframes hue-drift {
+    0%, 100% { filter: hue-rotate(0deg) brightness(1); }
+    50%      { filter: hue-rotate(-8deg) brightness(1.04); }
+  }
+
+  .clouds { position: fixed; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+  .cloud {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,240,220,0.85) 0%, rgba(255,240,220,0) 70%);
+    filter: blur(6px);
+    animation: drift-cloud 70s ease-in-out infinite alternate;
+  }
+  @keyframes drift-cloud {
+    0%   { transform: translateX(-16px); }
+    100% { transform: translateX(16px); }
+  }
+
+  .pillar-layer {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    z-index: 2;
+    pointer-events: none;
+    transition: transform 0.2s ease-out;
+    will-change: transform;
+  }
+  .pillar-back  { opacity: 0.5; }
+  .pillar-front { opacity: 0.8; }
+
+  .motes { position: fixed; inset: 0; z-index: 3; pointer-events: none; }
+  .mote {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--gold-bright);
+    box-shadow: 0 0 7px 2px rgba(255, 244, 218, 0.8);
+    animation: drift 15s ease-in-out infinite, flicker 2.8s ease-in-out infinite;
+  }
+  @keyframes drift {
+    0%   { transform: translate(0, 0); }
+    25%  { transform: translate(16px, -26px); }
+    50%  { transform: translate(-8px, -48px); }
+    75%  { transform: translate(-24px, -20px); }
+    100% { transform: translate(0, 0); }
+  }
+  @keyframes flicker {
+    0%, 100% { opacity: 0.2; }
+    50%      { opacity: 1; }
+  }
+
+  .page {
+    width: 100%;
+    max-width: 520px;
+    padding: 4rem 1.75rem 3rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    z-index: 4;
+  }
+
+  /* ---------- the gate ---------- */
+  .door-frame {
+    width: 156px;
+    height: 220px;
+    position: relative;
+    margin-bottom: 1.75rem;
+    opacity: 0;
+    transform: translateY(14px);
+    animation: rise 1.1s ease-out 0.15s forwards;
+    transition: transform 0.6s ease;
+    filter: drop-shadow(0 0 0 rgba(0,0,0,0));
+  }
+  @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+  .door-frame svg { width: 100%; height: 100%; display: block; overflow: visible; }
+
+  .door-leaf {
+    transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+    transform-box: fill-box;
+  }
+  .door-leaf-left  { transform-origin: 0% 50%; }
+  .door-leaf-right { transform-origin: 100% 50%; }
+  .door-glow { transition: opacity 0.6s ease; }
+  .flash { opacity: 0; }
+
+  .page:has(.path:hover) .door-frame,
+  .page:has(.path:focus-visible) .door-frame {
+    transform: scale(1.045);
+  }
+  .page:has(.path:hover) .door-leaf-left,
+  .page:has(.path:focus-visible) .door-leaf-left {
+    transform: scaleX(0.16) skewY(8deg);
+  }
+  .page:has(.path:hover) .door-leaf-right,
+  .page:has(.path:focus-visible) .door-leaf-right {
+    transform: scaleX(0.16) skewY(-8deg);
+  }
+  .page:has(.path:hover) .door-glow,
+  .page:has(.path:focus-visible) .door-glow {
+    opacity: 1;
+  }
+  .page:has(.path:hover) .flash,
+  .page:has(.path:focus-visible) .flash {
+    animation: flash-burst 0.75s ease-out;
+  }
+  @keyframes flash-burst {
+    0%   { opacity: 0;   transform: scale(0.4); }
+    28%  { opacity: 0.95; transform: scale(1.05); }
+    100% { opacity: 0;   transform: scale(1.7); }
+  }
+
+  /* ---------- title ---------- */
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 600;
+    font-size: 2.6rem;
+    letter-spacing: 0.02em;
+    margin: 0 0 0.35rem;
+    color: var(--parchment);
+  }
+  h1 .letter {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(10px);
+    animation: letter-in 0.6s ease-out forwards;
+  }
+  @keyframes letter-in { to { opacity: 1; transform: translateY(0); } }
+
+  .tagline {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 1.2rem;
+    color: var(--parchment);
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    margin: 0 0 2.75rem;
+    max-width: 30ch;
+    opacity: 0;
+    animation: fade-in 1s ease-out 0.9s forwards;
+  }
+  @keyframes fade-in { to { opacity: 1; } }
+
+  /* ---------- links ---------- */
+  .paths { width: 100%; display: flex; flex-direction: column; gap: 0.9rem; }
+  .path {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    width: 100%;
+    padding: 0.95rem 1.15rem;
+    background: rgba(243, 235, 224, 0.05);
+    border: 1px solid rgba(243, 235, 224, 0.18);
+    border-radius: 3px;
+    text-decoration: none;
+    color: var(--parchment);
+    background: rgba(20, 16, 30, 0.55);
+    backdrop-filter: blur(2px);
+    transition: border-color 0.25s ease, background 0.25s ease, transform 0.2s ease, box-shadow 0.3s ease;
+    position: relative;
+  }
+  .path:hover, .path:focus-visible {
+    border-color: var(--gold);
+    background: rgba(30, 22, 20, 0.68);
+    transform: translateX(3px);
+    box-shadow: 0 0 24px -4px rgba(236, 203, 142, 0.5);
+  }
+  .path:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .path-icon { width: 22px; height: 22px; flex-shrink: 0; color: var(--gold); filter: drop-shadow(0 0 3px rgba(0,0,0,0.6)); }
+  .path-icon svg { width: 100%; height: 100%; }
+  .path-text { display: flex; flex-direction: column; align-items: flex-start; gap: 0.1rem; }
+  .path-name { font-size: 1.05rem; font-weight: 700; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.6); }
+  .path-handle { font-size: 0.85rem; font-weight: 500; color: var(--gold); text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+  .path-arrow {
+    margin-left: auto;
+    color: var(--parchment-dim);
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 0.95rem;
+    transition: transform 0.3s ease, color 0.3s ease;
+  }
+  .path:hover .path-arrow, .path:focus-visible .path-arrow {
+    transform: translateX(4px);
+    color: var(--gold);
+  }
+
+
+  footer {
+    margin-top: 3rem;
+    font-size: 0.78rem;
+    color: var(--parchment-dim);
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .door-frame, .bg-wash, .cloud, .mote, h1 .letter, .tagline {
+      animation: none !important;
+    }
+    .door-frame, .tagline, h1 .letter { opacity: 1 !important; transform: none !important; }
+    .pillar-layer { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-wash" aria-hidden="true"></div>
+
+<div class="clouds" aria-hidden="true">
+  <span class="cloud" style="top:18%; left:8%;  width:180px; height:70px; animation-delay:0s;"></span>
+  <span class="cloud" style="top:10%; left:55%; width:220px; height:90px; animation-delay:6s;"></span>
+  <span class="cloud" style="top:28%; left:30%; width:140px; height:55px; animation-delay:12s;"></span>
+  <span class="cloud" style="top:6%;  left:75%; width:160px; height:60px; animation-delay:3s;"></span>
+</div>
+
+<svg class="pillar-layer pillar-back" data-depth="0.02" viewBox="0 0 400 160" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+  <g fill="#4b4460" opacity="0.9">
+    <rect x="10" y="30" width="14" height="130"/><rect x="4" y="20" width="26" height="10"/>
+    <rect x="70" y="10" width="16" height="150"/><rect x="63" y="0" width="30" height="10"/>
+    <rect x="150" y="45" width="13" height="115"/><rect x="144" y="36" width="25" height="9"/>
+    <rect x="230" y="15" width="16" height="145"/><rect x="223" y="6" width="30" height="9"/>
+    <rect x="310" y="40" width="14" height="120"/><rect x="303" y="31" width="28" height="9"/>
+    <rect x="376" y="22" width="16" height="138"/><rect x="369" y="13" width="30" height="9"/>
+  </g>
+</svg>
+<svg class="pillar-layer pillar-front" data-depth="0.05" viewBox="0 0 400 150" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+  <g fill="#2f2a42">
+    <rect x="30" y="20" width="20" height="130"/><rect x="21" y="8" width="38" height="12"/>
+    <rect x="340" y="14" width="22" height="136"/><rect x="330" y="2" width="42" height="12"/>
+    <polygon points="0,150 0,90 160,80 160,150" opacity="0.55"/>
+    <polygon points="400,150 400,88 250,78 250,150" opacity="0.55"/>
+  </g>
+</svg>
+
+<div class="motes" aria-hidden="true">
+  <span class="mote" style="top:62%; left:20%; animation-delay:0s, 0.3s;"></span>
+  <span class="mote" style="top:70%; left:75%; animation-delay:2s, 1s;"></span>
+  <span class="mote" style="top:55%; left:50%; animation-delay:4s, 0.6s;"></span>
+  <span class="mote" style="top:78%; left:35%; animation-delay:6s, 1.4s;"></span>
+  <span class="mote" style="top:65%; left:88%; animation-delay:1s, 0.8s;"></span>
+  <span class="mote" style="top:48%; left:10%; animation-delay:3s, 1.9s;"></span>
+</div>
+
+<div class="page">
+
+  <div class="door-frame">
+    <svg viewBox="0 0 148 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- outer stone arch -->
+      <path d="M12 216 L12 92 Q12 34 74 16 Q136 34 136 92 L136 216" stroke="var(--stone-dark)" stroke-width="11" stroke-linecap="round"/>
+      <path d="M12 216 L12 92 Q12 34 74 16 Q136 34 136 92 L136 216" stroke="var(--stone)" stroke-width="3" stroke-linecap="round" opacity="0.55"/>
+
+      <!-- glow revealed as the gate opens -->
+      <path class="door-glow" d="M30 216 L30 92 Q30 46 74 30 Q118 46 118 92 L118 216 Z" fill="url(#glow)" opacity="0.85"/>
+
+      <!-- left leaf -->
+      <g class="door-leaf door-leaf-left">
+        <path d="M74 216 L74 30 Q30 46 30 92 L30 216 Z" fill="url(#stonePanel)" stroke="var(--gold)" stroke-width="2"/>
+        <path d="M74 216 L74 30 Q30 46 30 92 L30 216 Z" fill="url(#lattice)" opacity="0.5"/>
+        <path d="M50 82 L59 92 L50 102 L41 92 Z" fill="var(--gold)" stroke="#fff7e6" stroke-width="1"/>
+      </g>
+      <!-- right leaf -->
+      <g class="door-leaf door-leaf-right">
+        <path d="M74 216 L74 30 Q118 46 118 92 L118 216 Z" fill="url(#stonePanel)" stroke="var(--gold)" stroke-width="2"/>
+        <path d="M74 216 L74 30 Q118 46 118 92 L118 216 Z" fill="url(#lattice)" opacity="0.5"/>
+        <path d="M98 82 L107 92 L98 102 L89 92 Z" fill="var(--gold)" stroke="#fff7e6" stroke-width="1"/>
+      </g>
+
+      <!-- portal flash -->
+      <circle class="flash" cx="74" cy="120" r="70" fill="url(#flashGrad)"/>
+
+      <defs>
+        <linearGradient id="stonePanel" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#8791ab"/>
+          <stop offset="100%" stop-color="#3b3f56"/>
+        </linearGradient>
+        <pattern id="lattice" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <line x1="0" y1="8" x2="16" y2="8" stroke="#eccb8e" stroke-width="1" opacity="0.4"/>
+          <line x1="8" y1="0" x2="8" y2="16" stroke="#eccb8e" stroke-width="1" opacity="0.4"/>
+        </pattern>
+        <radialGradient id="glow" cx="50%" cy="55%" r="65%">
+          <stop offset="0%" stop-color="#fff4da" stop-opacity="0.7">
+            <animate attributeName="stop-color" values="#fff4da;#f6c98a;#f0a8a0;#fff4da" dur="18s" repeatCount="indefinite"/>
+          </stop>
+          <stop offset="45%" stop-color="#e0a860" stop-opacity="0.3">
+            <animate attributeName="stop-color" values="#e0a860;#c98a6a;#a084a3;#e0a860" dur="18s" repeatCount="indefinite"/>
+          </stop>
+          <stop offset="100%" stop-color="#241d30" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="flashGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#fffdf6" stop-opacity="1"/>
+          <stop offset="55%" stop-color="#fff0cf" stop-opacity="0.6"/>
+          <stop offset="100%" stop-color="#fff0cf" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+    </svg>
+  </div>
+
+  <h1 aria-label="Novel"><span class="letter" style="animation-delay:0.25s">N</span><span class="letter" style="animation-delay:0.32s">o</span><span class="letter" style="animation-delay:0.39s">v</span><span class="letter" style="animation-delay:0.46s">e</span><span class="letter" style="animation-delay:0.53s">l</span></h1>
+  <p class="tagline">Ad Astra Abyssosque</p>
+
+  <nav class="paths" aria-label="Social links">
+
+    <a class="path" href="https://www.instagram.com/shosetsu_0?stkn=MTM5bGY5M2NqdXJ5Mg==" data-platform="instagram">
+      <span class="path-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.4" cy="6.6" r="1"/></svg>
+      </span>
+      <span class="path-text">
+        <span class="path-name">Instagram</span>
+        <span class="path-handle">@shosetsu_0</span>
+      </span>
+      <span class="path-arrow">↦</span>
+    </a>
+
+    <a class="path" href="https://www.tiktok.com/@ssomura_?_r=1&_t=ZS-99uHSwd2fz6" data-platform="tiktok">
+      <span class="path-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.6 5.5c-.9-.6-1.5-1.5-1.7-2.6h-3v12.4c0 1.4-1.1 2.5-2.5 2.5s-2.5-1.1-2.5-2.5 1.1-2.5 2.5-2.5c.3 0 .5 0 .8.1V9.7c-.3 0-.5-.1-.8-.1-3 0-5.4 2.4-5.4 5.4s2.4 5.4 5.4 5.4 5.4-2.4 5.4-5.4V8.8c1.1.8 2.5 1.3 4 1.3V7.1c-.8 0-1.6-.2-2.2-.6-.4-.3-.7-.6-1-1z"/></svg>
+      </span>
+      <span class="path-text">
+        <span class="path-name">TikTok</span>
+        <span class="path-handle">@ssomura_</span>
+      </span>
+      <span class="path-arrow">↦</span>
+    </a>
+
+    <a class="path" href=https://www.facebook.com/share/1HTDXbhYDP/ data-platform="facebook">
+      <span class="path-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M15 3h-2.5A4.5 4.5 0 0 0 8 7.5V10H6v4h2v7h4v-7h2.5l.5-4H12V7.5c0-.4.3-.7.7-.7H15V3z"/></svg>
+      </span>
+      <span class="path-text">
+        <span class="path-name">Facebook</span>
+        <span class="path-handle">Novel Corral</span>
+      </span>
+      <span class="path-arrow">↦</span>
+    </a>
+
+  </nav>
+
+  <footer></footer>
+</div>
+
+<script>
+(function () {
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce) return;
+  var layers = document.querySelectorAll('.pillar-layer');
+  window.addEventListener('pointermove', function (e) {
+    var xRatio = (e.clientX / window.innerWidth) - 0.5;
+    layers.forEach(function (el) {
+      var depth = parseFloat(el.getAttribute('data-depth')) || 0.03;
+      var shift = -xRatio * depth * 400;
+      el.style.transform = 'translateX(' + shift + 'px)';
+    });
+  }, { passive: true });
+})();
+</script>
+
+</body>
+</html>
+
